@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../services/api";
 import { Header } from "../components/NavBar";
 import { useAuth } from "../contexts/AuthContext";
+import { Footer } from "../components/Footer";
 
 interface FormData {
   email: string;
@@ -363,13 +364,7 @@ const SignIn = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white py-6 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-500 text-sm mb-4 md:mb-0">
-            © 2025 Holidaze. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
