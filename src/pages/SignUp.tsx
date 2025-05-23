@@ -1,196 +1,7 @@
-// import logo from "../assets/logo.png";
-// import { Link, useNavigate } from "react-router-dom";
-// import { IoMdMail } from "react-icons/io";
-// import { FaUser, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
-// import { useState, type ChangeEvent, type FormEvent } from "react";
-// import { registerUser } from "../services/api";
-
-// interface FormData {
-//   email: string;
-//   name: string;
-//   password: string;
-//   venueManager: boolean;
-// }
-
-// const SignUp = () => {
-//   const navigate = useNavigate();
-//   const [formData, setFormData] = useState<FormData>({
-//     email: "",
-//     name: "",
-//     password: "",
-//     venueManager: false,
-//   });
-
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [loading, setLoading] = useState(false);
-//   const [message, setMessage] = useState("");
-
-//   const handleChange = (
-//     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
-//   ) => {
-//     const { name, value } = e.target;
-//     const newValue = name === "venueManager" ? value === "true" : value;
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: newValue,
-//     }));
-//   };
-
-//   const togglePassword = () => setShowPassword((prev) => !prev);
-
-//   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-//     e.preventDefault();
-//     setLoading(true);
-//     setMessage("");
-
-//     try {
-//       await registerUser(formData);
-//       setMessage("🎉 Registration successful!");
-//       setFormData({
-//         email: "",
-//         name: "",
-//         password: "",
-//         venueManager: false,
-//       });
-//       setTimeout(() => navigate("/sign-in"), 1000);
-//     } catch (err: any) {
-//       setMessage(`❌ ${err.message}`);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-//   return (
-//     <div className="bg-[#f4f4f4]">
-//       <div className="flex justify-between items-center gap-5 md:px-10 px-5 md:py-10 py-5 bg-white">
-//         <div className="flex items-center gap-2">
-//           <img src={logo} alt="logo" className="w-full" />
-//           <h1 className="md:text-3xl text-2xl font-bold">Holidaze</h1>
-//         </div>
-//         <div className="flex items-center gap-3">
-//           <h1 className="text-2xl font-bold md:block hidden">
-//             Already have an account?
-//           </h1>
-//           <Link to="/sign-in">
-//             <button className="md:px-6 px-4 py-2 border-3 md:text-2xl text-xl font-bold rounded-2xl cursor-pointer">
-//               Login
-//             </button>
-//           </Link>
-//         </div>
-//       </div>
-
-//       <div className="md:w-[40%] w-[85%] mx-auto my-20 bg-white md:p-20 p-10 space-y-5">
-//         <h1 className="text-4xl font-bold mb-10">Welcome to Holidaze</h1>
-//         <p className="text-[#828282]  text-xl font-medium">
-//           Welcome to Holidaze were booking of venue have been made easy and
-//           effective, join now and get started and watch your life experience
-//           become more better.{" "}
-//         </p>
-
-//         <form onSubmit={handleSubmit} className="space-y-4 w-[90%] mx-auto">
-//           <div className="relative">
-//             <IoMdMail className="absolute left-10 top-2.5 h-5 w-5 text-gray-400" />
-//             <input
-//               type="email"
-//               id="email"
-//               name="email"
-//               required
-//               placeholder="Active Email *"
-//               pattern="^[\\w\\-.]+@(stud\\.)?noroff\\.no$"
-//               value={formData.email}
-//               onChange={handleChange}
-//               className="w-full pl-20 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200"
-//             />
-//           </div>
-
-//           <div className="relative">
-//             <FaUser className="absolute left-10 top-2.5 h-5 w-5 text-gray-400" />
-//             <input
-//               type="text"
-//               id="name"
-//               name="name"
-//               required
-//               placeholder="Username"
-//               value={formData.name}
-//               onChange={handleChange}
-//               className="w-full pl-20 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200"
-//             />
-//           </div>
-
-//           <div className="relative">
-//             <FaLock className="absolute left-10 top-2.5 h-5 w-5 text-gray-400" />
-//             <input
-//               type={showPassword ? "text" : "password"}
-//               id="password"
-//               name="password"
-//               required
-//               placeholder="Password"
-//               value={formData.password}
-//               onChange={handleChange}
-//               className="w-full pl-20 pr-12 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200"
-//             />
-//             <button
-//               type="button"
-//               onClick={togglePassword}
-//               className="absolute right-4 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-//               tabIndex={-1}
-//             >
-//               {showPassword ? (
-//                 <FaEyeSlash className="h-5 w-5" />
-//               ) : (
-//                 <FaEye className="h-5 w-5" />
-//               )}
-//             </button>
-//           </div>
-
-//           <div>
-//             <label
-//               htmlFor="venueManager"
-//               className="block text-xl font-medium text-gray-700 mb-1"
-//             >
-//               Register as a Venue Manager?
-//             </label>
-//             <select
-//               id="venueManager"
-//               name="venueManager"
-//               value={String(formData.venueManager)}
-//               onChange={handleChange}
-//               className="w-full py-2 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-blue-200"
-//             >
-//               <option value="false">No</option>
-//               <option value="true">Yes</option>
-//             </select>
-//           </div>
-
-//           <div className="text-xl font-semibold">
-//             <input type="checkbox" required className="w-5 h-5 mr-2" /> I agree
-//             to the <span className="text-[#8BC4FF]">Terms and Service</span> and{" "}
-//             <span className="text-[#8BC4FF]">Privacy Policy.</span>
-//           </div>
-
-//           <button
-//             type="submit"
-//             disabled={loading}
-//             className="w-full py-2 bg-[#8BC4FF] text-white rounded-md hover:bg-cyan-700 disabled:opacity-50 text-xl font-bold mt-5"
-//           >
-//             {loading ? "Registering..." : "Sign Up"}
-//           </button>
-
-//           {message && (
-//             <div className="text-center text-sm mt-2 text-red-500">
-//               {message}
-//             </div>
-//           )}
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default SignUp;
-
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../services/api";
+import { Header } from "../components/NavBar";
 
 interface FormData {
   email: string;
@@ -250,40 +61,13 @@ const SignUp = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Modern Navbar */}
-      <nav className="bg-white shadow-md py-4 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="bg-blue-600 text-white p-2 rounded-lg">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-            </div>
-            <span className="font-bold text-xl text-gray-800">Holidaze</span>
-          </Link>
-          <Link to="/sign-in">
-            <button className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors duration-300 font-semibold rounded-lg px-5 py-2">
-              Sign In
-            </button>
-          </Link>
-        </div>
-      </nav>
+      <Header text="Sign In" link="/sign-in" />
 
       {/* Main Content */}
       <div className="flex-grow flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full flex flex-col md:flex-row">
           {/* Left Panel - Info & Branding */}
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-800 text-white p-8 md:p-12 md:w-2/5">
+          <div className="bg-emerald-600 text-white p-8 md:p-12 md:w-2/5">
             <div className="h-full flex flex-col justify-between">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-6">
@@ -297,7 +81,7 @@ const SignUp = () => {
               <div className="hidden md:block">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-500 bg-opacity-30 p-2 rounded-full">
+                    <div className="bg-emerald-300 bg-opacity-30 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5"
@@ -316,7 +100,7 @@ const SignUp = () => {
                     <p>Quick and easy booking process</p>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-500 bg-opacity-30 p-2 rounded-full">
+                    <div className="bg-emerald-300 bg-opacity-30 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5"
@@ -335,7 +119,7 @@ const SignUp = () => {
                     <p>Exclusive venues for all occasions</p>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-500 bg-opacity-30 p-2 rounded-full">
+                    <div className="bg-emerald-300 bg-opacity-30 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5"
@@ -542,9 +326,9 @@ const SignUp = () => {
                   name="venueManager"
                   value={String(formData.venueManager)}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
                 >
-                  <option value="false">Regular User</option>
+                  <option value="false">Customer</option>
                   <option value="true">Venue Manager</option>
                 </select>
               </div>
@@ -563,13 +347,13 @@ const SignUp = () => {
                 <div className="ml-3 text-sm">
                   <label htmlFor="terms" className="text-gray-600">
                     I agree to the{" "}
-                    <a href="#" className="text-blue-600 hover:underline">
+                    <span className="text-blue-600 hover:underline">
                       Terms of Service
-                    </a>{" "}
+                    </span>{" "}
                     and{" "}
-                    <a href="#" className="text-blue-600 hover:underline">
+                    <span className="text-blue-600 hover:underline">
                       Privacy Policy
-                    </a>
+                    </span>
                   </label>
                 </div>
               </div>
@@ -591,7 +375,7 @@ const SignUp = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 text-white font-medium rounded-lg py-3 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-300 text-white font-medium rounded-lg py-3 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="flex items-center justify-center space-x-2">

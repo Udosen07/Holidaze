@@ -1,6 +1,8 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../services/api";
+import { Header } from "../components/NavBar";
+import { useAuth } from "../contexts/AuthContext";
 
 interface FormData {
   email: string;
@@ -8,6 +10,7 @@ interface FormData {
 }
 
 const SignIn = () => {
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     email: "",
@@ -44,17 +47,15 @@ const SignIn = () => {
         password: "",
       });
 
-      const { accessToken, venueManager } = response.data;
+      const { accessToken, ...userData } = response.data;
 
-      if (rememberMe) {
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("venueManager", JSON.stringify(venueManager));
-      } else {
-        sessionStorage.setItem("accessToken", accessToken);
-        sessionStorage.setItem("venueManager", JSON.stringify(venueManager));
-      }
+      // Store rememberMe preference temporarily
+      sessionStorage.setItem("rememberMe", rememberMe.toString());
 
-      setTimeout(() => navigate("/"), 1000);
+      // Use the auth context to login
+      login(userData, accessToken);
+
+      setTimeout(() => navigate("/", { replace: true }), 1000);
     } catch (err: any) {
       setMessage(`❌ ${err.message}`);
     } finally {
@@ -65,34 +66,7 @@ const SignIn = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Modern Navbar */}
-      <nav className="bg-white shadow-md py-4 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="bg-blue-600 text-white p-2 rounded-lg">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-            </div>
-            <span className="font-bold text-xl text-gray-800">Holidaze</span>
-          </Link>
-          <Link to="/sign-up">
-            <button className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors duration-300 font-semibold rounded-lg px-5 py-2">
-              Create Account
-            </button>
-          </Link>
-        </div>
-      </nav>
+      <Header text="Sign Up" link="/sign-up" />
 
       {/* Main Content */}
       <div className="flex-grow flex items-center justify-center p-6">
@@ -267,7 +241,7 @@ const SignIn = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 text-white font-medium rounded-lg py-3 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-300 text-white font-medium rounded-lg py-3 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -311,7 +285,7 @@ const SignIn = () => {
           </div>
 
           {/* Right Panel - Info & Branding */}
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-800 text-white p-8 md:p-12 md:w-2/5 order-1 md:order-2">
+          <div className="bg-emerald-600 text-white p-8 md:p-12 md:w-2/5 order-1 md:order-2">
             <div className="h-full flex flex-col justify-between">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-6">
@@ -325,7 +299,7 @@ const SignIn = () => {
               <div className="hidden md:block">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-500 bg-opacity-30 p-2 rounded-full">
+                    <div className="bg-emerald-300 bg-opacity-30 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5"
@@ -344,7 +318,7 @@ const SignIn = () => {
                     <p>Access your bookings and reservations</p>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-500 bg-opacity-30 p-2 rounded-full">
+                    <div className="bg-emerald-300 bg-opacity-30 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5"
@@ -363,7 +337,7 @@ const SignIn = () => {
                     <p>Get personalized venue recommendations</p>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <div className="bg-blue-500 bg-opacity-30 p-2 rounded-full">
+                    <div className="bg-emerald-300 bg-opacity-30 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5"

@@ -31,3 +31,44 @@ export async function loginUser(data: LoginUserData) {
 
   return result;
 }
+
+export async function getAllVenues() {
+  const response = await fetch(`${BASE_URL}/holidaze/venues`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result?.errors?.[0]?.message ?? "Registration failed");
+  }
+
+  return result;
+}
+
+export const getVenueById = async (id: string) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/holidaze/venues/${id}?_bookings=true&_owner=true`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch venue: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching venue by ID:", error);
+    throw error;
+  }
+};
