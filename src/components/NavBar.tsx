@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Home, User, Plus, LogOut, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 type HeaderProps = {
   text?: string;
@@ -27,6 +27,9 @@ export const Header = ({
     setShowDropdown(false);
     navigate("/profile");
   };
+
+  console.log("isAuthenticated:", isAuthenticated);
+  console.log("user:", user);
 
   return (
     <header className="bg-white shadow-sm">
@@ -58,7 +61,7 @@ export const Header = ({
                   {user.avatar?.url ? (
                     <img
                       src={user.avatar.url}
-                      alt={user.avatar.alt || user.name}
+                      alt={user.name}
                       className="h-8 w-8 rounded-full object-cover"
                       onError={(e) => {
                         // Fallback to user icon if image fails to load

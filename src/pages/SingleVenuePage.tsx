@@ -20,27 +20,27 @@ export default function SingleVenuePage() {
   const [error, setError] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
 
+  const fetchVenue = async () => {
+    if (!id) {
+      setError("Venue ID is required");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getVenueById(id);
+      setVenue(data.data);
+    } catch (err) {
+      console.error("Failed to fetch venue:", err);
+      setError("Failed to load venue. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchVenue = async () => {
-      if (!id) {
-        setError("Venue ID is required");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getVenueById(id);
-        setVenue(data.data);
-      } catch (err) {
-        console.error("Failed to fetch venue:", err);
-        setError("Failed to load venue. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchVenue();
   }, [id]);
 
@@ -79,6 +79,7 @@ export default function SingleVenuePage() {
               <VenueBookingSection
                 venue={venue}
                 onViewCalendar={toggleCalendar}
+                onBookingSuccess={fetchVenue}
               />
             </div>
           </div>

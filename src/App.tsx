@@ -3,7 +3,8 @@ import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import HomePage from "./pages/HomePage";
 import SingleVenuePage from "./pages/SingleVenuePage";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
+import ProfilePage from "./pages/Profile";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/venue/:id" element={<SingleVenuePage />} />
           <Route path="/sign-up" element={<SignUp />} />
           <Route path="/sign-in" element={<SignIn />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </Router>
     </AuthProvider>

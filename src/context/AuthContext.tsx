@@ -13,11 +13,9 @@ interface User {
   email: string;
   avatar: {
     url: string;
-    alt: string;
   };
   banner: {
     url: string;
-    alt: string;
   };
   venueManager: boolean;
 }
@@ -29,6 +27,7 @@ interface AuthContextType {
   login: (userData: User, token: string) => void;
   logout: () => void;
   loading: boolean;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -122,6 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       login,
       logout,
       loading,
+      setUser,
     }),
     [user, accessToken, isAuthenticated, loading]
   );

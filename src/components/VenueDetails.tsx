@@ -12,8 +12,10 @@ export const VenueDetails = ({
 }: VenueDetailsProps): React.ReactElement => (
   <>
     <div className="flex justify-between items-start">
-      <h1 className="text-2xl font-bold text-gray-900">{venue.name}</h1>
-      <div className="flex items-center">
+      <h1 className="text-2xl font-bold text-gray-900 truncate">
+        {venue.name}
+      </h1>
+      <div className="flex items-center flex-shrink-0">
         <Star className="h-5 w-5 text-yellow-500" fill="currentColor" />
         <span className="ml-1 text-gray-700">{venue.rating}</span>
       </div>

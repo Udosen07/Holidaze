@@ -1,17 +1,29 @@
 // components/VenueBookingSection.tsx
-import React from "react";
+import React, { useState } from "react";
 import { Users, Calendar } from "lucide-react";
 import type { Venue } from "../types";
+import { useAuth } from "../context/AuthContext";
+import { BookNowModal } from "./BookNowModal";
 
 interface VenueBookingSectionProps {
   venue: Venue;
   onViewCalendar: () => void;
+  onBookingSuccess: () => void;
 }
 
 export const VenueBookingSection = ({
   venue,
   onViewCalendar,
+  onBookingSuccess,
 }: VenueBookingSectionProps): React.ReactElement => {
+  const { isAuthenticated } = useAuth();
+
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
+  const handleBookingSuccess = () => {
+    alert("Booking created successfully!");
+    onBookingSuccess();
+  };
   return (
     <>
       <div className="mt-4">
@@ -34,11 +46,25 @@ export const VenueBookingSection = ({
             <Users className="h-5 w-5 mr-2" />
             Up to {venue.maxGuests} guests
           </div>
-          <button className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-8 rounded-md w-full">
-            Book Now
-          </button>
+          {isAuthenticated && (
+            <button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-8 rounded-md w-full"
+              onClick={() => setShowBookingModal(true)}
+            >
+              Book Now
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Booking Modal */}
+      {showBookingModal && (
+        <BookNowModal
+          venue={venue}
+          onClose={() => setShowBookingModal(false)}
+          onBookingSuccess={handleBookingSuccess}
+        />
+      )}
     </>
   );
 };
