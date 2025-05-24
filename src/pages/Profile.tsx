@@ -95,7 +95,14 @@ const ProfilePage: React.FC = () => {
       if (!user?.name) return;
 
       const updatedProfile = await updateProfile(user.name, profileForm);
-      setProfile(updatedProfile.data);
+
+      // Preserve the existing bookings and venues when updating the profile
+      setProfile((prevProfile: any) => ({
+        ...updatedProfile.data,
+        bookings: prevProfile?.bookings ?? [],
+        venues: prevProfile?.venues ?? [],
+        _count: prevProfile?._count ?? { bookings: 0, venues: 0 },
+      }));
 
       // Update the AuthContext if any profile data changed
       setUser((prevUser) => {
@@ -310,7 +317,7 @@ const ProfilePage: React.FC = () => {
     setVenueForm({
       name: venue.name,
       description: venue.description,
-      media: venue.media || [], // Preserve existing media
+      media: venue.media ?? [], // Preserve existing media
       price: venue.price,
       maxGuests: venue.maxGuests,
       meta: {
@@ -557,22 +564,34 @@ const ProfilePage: React.FC = () => {
 
       {/* Edit Profile Modal */}
       {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Edit Profile</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    Edit Profile
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Update your personal information
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowProfileModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 group"
                 >
-                  &times;
+                  <span className="text-gray-500 group-hover:text-gray-700 text-lg font-light">
+                    &times;
+                  </span>
                 </button>
               </div>
 
-              <form onSubmit={handleProfileUpdate}>
-                <div className="mb-4">
-                  <label htmlFor="bio" className="block text-gray-700 mb-2">
+              <form onSubmit={handleProfileUpdate} className="space-y-6">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="bio"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Bio
                   </label>
                   <textarea
@@ -581,73 +600,111 @@ const ProfilePage: React.FC = () => {
                     onChange={(e) =>
                       setProfileForm({ ...profileForm, bio: e.target.value })
                     }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-100 resize-none"
                     rows={4}
+                    placeholder="Tell us about yourself..."
                   />
                 </div>
 
-                <div className="mb-4">
-                  <label htmlFor="avatar" className="block text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="avatar"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Avatar URL
                   </label>
-                  <input
-                    type="text"
-                    name="avatar"
-                    value={profileForm.avatar.url}
-                    onChange={(e) =>
-                      setProfileForm({
-                        ...profileForm,
-                        avatar: { ...profileForm.avatar, url: e.target.value },
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="avatar"
+                      value={profileForm.avatar.url}
+                      onChange={(e) =>
+                        setProfileForm({
+                          ...profileForm,
+                          avatar: {
+                            ...profileForm.avatar,
+                            url: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-100 pl-12"
+                      placeholder="https://example.com/avatar.jpg"
+                    />
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                      <div className="w-5 h-5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">👤</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mb-4">
-                  <p className="block text-gray-700 mb-2">Banner URL</p>
-                  <input
-                    type="text"
-                    value={profileForm.banner.url}
-                    onChange={(e) =>
-                      setProfileForm({
-                        ...profileForm,
-                        banner: { ...profileForm.banner, url: e.target.value },
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <div className="space-y-2">
+                  <p className="block text-sm font-medium text-gray-700">
+                    Banner URL
+                  </p>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={profileForm.banner.url}
+                      onChange={(e) =>
+                        setProfileForm({
+                          ...profileForm,
+                          banner: {
+                            ...profileForm.banner,
+                            url: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-100 pl-12"
+                      placeholder="https://example.com/banner.jpg"
+                    />
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                      <div className="w-5 h-5 bg-gradient-to-br from-purple-400 to-purple-600 rounded flex items-center justify-center">
+                        <span className="text-white text-xs">🖼️</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mb-4 flex items-center">
-                  <input
-                    type="checkbox"
-                    id="venueManager"
-                    checked={profileForm.venueManager}
-                    onChange={(e) =>
-                      setProfileForm({
-                        ...profileForm,
-                        venueManager: e.target.checked,
-                      })
-                    }
-                    className="mr-2"
-                  />
-                  <label htmlFor="venueManager" className="text-gray-700">
-                    Venue Manager
-                  </label>
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        id="venueManager"
+                        checked={profileForm.venueManager}
+                        onChange={(e) =>
+                          setProfileForm({
+                            ...profileForm,
+                            venueManager: e.target.checked,
+                          })
+                        }
+                        className="w-5 h-5 text-emerald-600 bg-white border-2 border-emerald-300 rounded focus:ring-emerald-500 focus:ring-2 transition-all duration-200"
+                      />
+                    </div>
+                    <label
+                      htmlFor="venueManager"
+                      className="text-gray-700 font-medium cursor-pointer select-none"
+                    >
+                      Venue Manager
+                    </label>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2 ml-8">
+                    Enable this to manage venue listings and bookings
+                  </p>
                 </div>
 
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowProfileModal(false)}
-                    className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition"
+                    className="px-6 py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200 hover:scale-105"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
                     Save Changes
                   </button>
@@ -660,29 +717,46 @@ const ProfilePage: React.FC = () => {
 
       {/* Edit Booking Modal */}
       {showBookingModal && currentEditItem && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Edit Booking</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-white/20">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    Edit Booking
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Update your reservation details
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowBookingModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all duration-200 hover:scale-105 group"
                 >
-                  &times;
+                  <span className="text-gray-500 group-hover:text-gray-700 text-lg font-light">
+                    &times;
+                  </span>
                 </button>
               </div>
 
-              <form onSubmit={handleBookingUpdate}>
-                <fieldset className="mb-4">
-                  <legend className="block text-gray-700 mb-2">Venue</legend>
-                  <p className="font-medium">
-                    {currentEditItem.venue?.name ?? "Unknown Venue"}
-                  </p>
+              <form onSubmit={handleBookingUpdate} className="space-y-6">
+                <fieldset className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                  <legend className="text-sm font-medium text-gray-700 mb-2 px-2">
+                    Venue
+                  </legend>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <p className="font-semibold text-gray-900">
+                      {currentEditItem.venue?.name ?? "Unknown Venue"}
+                    </p>
+                  </div>
                 </fieldset>
 
-                <div className="mb-4">
-                  <label htmlFor="checkin" className="block text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="checkin"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Check-in Date
                   </label>
                   <input
@@ -695,15 +769,15 @@ const ProfilePage: React.FC = () => {
                         dateFrom: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-100"
                     required
                   />
                 </div>
 
-                <div className="mb-4">
+                <div className="space-y-2">
                   <label
                     htmlFor="checkout"
-                    className="block text-gray-700 mb-2"
+                    className="block text-sm font-medium text-gray-700"
                   >
                     Check-out Date
                   </label>
@@ -717,13 +791,16 @@ const ProfilePage: React.FC = () => {
                         dateTo: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-100"
                     required
                   />
                 </div>
 
-                <div className="mb-4">
-                  <label htmlFor="guests" className="block text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="guests"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Number of Guests
                   </label>
                   <input
@@ -738,25 +815,28 @@ const ProfilePage: React.FC = () => {
                         guests: parseInt(e.target.value),
                       })
                     }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:bg-gray-100"
                     required
                   />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Maximum guests: {currentEditItem.venue.maxGuests}
-                  </p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <p className="text-sm text-gray-600">
+                      Maximum guests: {currentEditItem.venue.maxGuests}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => setShowBookingModal(false)}
-                    className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition"
+                    className="px-6 py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200 hover:scale-105"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
                     Update Booking
                   </button>
@@ -877,18 +957,21 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <p className="block text-sm font-semibold text-gray-700">
                     Venue Images
-                  </label>
+                  </p>
                   <div className="space-y-3">
-                    {venueForm.media.map((media, index) => (
-                      <div key={index} className="flex items-center gap-3">
+                    {venueForm.media.map((media) => (
+                      <div key={media.url} className="flex items-center gap-3">
                         <input
                           type="text"
                           value={media.url}
                           onChange={(e) => {
-                            const newMedia = [...venueForm.media];
-                            newMedia[index].url = e.target.value;
+                            const newMedia = venueForm.media.map((m) =>
+                              m.url === media.url
+                                ? { ...m, url: e.target.value }
+                                : m
+                            );
                             setVenueForm({ ...venueForm, media: newMedia });
                           }}
                           className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
@@ -897,8 +980,9 @@ const ProfilePage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            const newMedia = [...venueForm.media];
-                            newMedia.splice(index, 1);
+                            const newMedia = venueForm.media.filter(
+                              (m) => m.url !== media.url
+                            );
                             setVenueForm({ ...venueForm, media: newMedia });
                           }}
                           className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 flex items-center justify-center"
