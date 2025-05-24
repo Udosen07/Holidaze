@@ -42,6 +42,7 @@ const ProfilePage: React.FC = () => {
   const [venueForm, setVenueForm] = useState({
     name: "",
     description: "",
+    media: [] as Array<{ url: string; alt?: string }>, // Add this line
     price: 0,
     maxGuests: 0,
     meta: {
@@ -132,33 +133,92 @@ const ProfilePage: React.FC = () => {
     try {
       if (!currentEditItem?.id) return;
 
+      // 1. Validate the form data first
+      if (!bookingForm.dateFrom || !bookingForm.dateTo || !bookingForm.guests) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      const dateFrom = new Date(bookingForm.dateFrom);
+      const dateTo = new Date(bookingForm.dateTo);
+
+      // 2. Check date validity
+      if (dateFrom >= dateTo) {
+        throw new Error("Check-out date must be after check-in date");
+      }
+
+      if (dateFrom < new Date()) {
+        throw new Error("Booking dates must be in the future");
+      }
+
+      // 3. Check guests against venue capacity
+      if (
+        currentEditItem.venue &&
+        bookingForm.guests > currentEditItem.venue.maxGuests
+      ) {
+        throw new Error(
+          `Maximum ${currentEditItem.venue.maxGuests} guests allowed for this venue`
+        );
+      }
+
+      // 4. Format dates for API (ISO string without time if your API expects just dates)
+      const formattedData = {
+        dateFrom: dateFrom.toISOString().split("T")[0], // Just the date part
+        dateTo: dateTo.toISOString().split("T")[0], // Just the date part
+        guests: Number(bookingForm.guests), // Ensure it's a number
+      };
+
+      console.log("Submitting booking update:", formattedData); // Debug log
+
+      // 5. Call API
       const updatedBooking = await updateBooking(
         currentEditItem.id,
-        bookingForm
+        formattedData
       );
 
-      // Update the bookings list
+      // 6. Update state while preserving venue data
       setProfile((prev: any) => ({
         ...prev,
         bookings: prev.bookings.map((booking: any) =>
-          booking.id === currentEditItem.id ? updatedBooking.data : booking
+          booking.id === currentEditItem.id
+            ? {
+                ...updatedBooking.data,
+                venue: booking.venue, // Preserve original venue data
+                dateFrom: formattedData.dateFrom, // Ensure formatted dates are used
+                dateTo: formattedData.dateTo,
+                guests: formattedData.guests,
+              }
+            : booking
         ),
       }));
 
+      // 7. Close modal and optionally show success message
       setShowBookingModal(false);
+      setError(null); // Clear any previous errors
+      // You could add a success state here if you want to show a confirmation
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update booking");
+      console.error("Booking update error:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update booking. Please try again."
+      );
     }
   };
+
+  // In your handleBookingDelete and handleVenueDelete functions, update to also decrement counts:
 
   const handleBookingDelete = async (id: string) => {
     try {
       await deleteBooking(id);
 
-      // Update the bookings list
+      // Update the bookings list and counts
       setProfile((prev: any) => ({
         ...prev,
         bookings: prev.bookings.filter((booking: any) => booking.id !== id),
+        _count: {
+          ...prev._count,
+          bookings: prev._count.bookings - 1,
+        },
       }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete booking");
@@ -168,11 +228,26 @@ const ProfilePage: React.FC = () => {
   const handleVenueUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!currentEditItem?.id) return;
+      if (!currentEditItem?.id) {
+        window.alert("Error: Please select a venue to update");
+        return;
+      }
 
-      const updatedVenue = await updateVenue(currentEditItem.id, venueForm);
+      // Basic validation
+      if (!venueForm.name || !venueForm.description) {
+        window.alert("Error: Name and description are required fields");
+        return;
+      }
 
-      // Update the venues list
+      // Filter out empty media URLs
+      const cleanMedia = venueForm.media.filter((m) => m.url.trim() !== "");
+
+      const updatedVenue = await updateVenue(currentEditItem.id, {
+        ...venueForm,
+        media: cleanMedia,
+      });
+
+      // Update UI state
       setProfile((prev: any) => ({
         ...prev,
         venues: prev.venues.map((venue: any) =>
@@ -181,22 +256,42 @@ const ProfilePage: React.FC = () => {
       }));
 
       setShowVenueModal(false);
+      window.alert("Success: Venue updated successfully!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update venue");
+      window.alert(
+        `Error: ${
+          err instanceof Error ? err.message : "Failed to update venue"
+        }`
+      );
     }
   };
 
   const handleVenueDelete = async (id: string) => {
     try {
+      const confirmDelete = window.confirm(
+        "Are you sure you want to delete this venue?\nThis action cannot be undone."
+      );
+      if (!confirmDelete) return;
+
       await deleteVenue(id);
 
-      // Update the venues list
+      // Update UI state
       setProfile((prev: any) => ({
         ...prev,
         venues: prev.venues.filter((venue: any) => venue.id !== id),
+        _count: {
+          ...prev._count,
+          venues: prev._count.venues - 1,
+        },
       }));
+
+      window.alert("Success: Venue deleted successfully!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete venue");
+      window.alert(
+        `Error: ${
+          err instanceof Error ? err.message : "Failed to delete venue"
+        }`
+      );
     }
   };
 
@@ -215,6 +310,7 @@ const ProfilePage: React.FC = () => {
     setVenueForm({
       name: venue.name,
       description: venue.description,
+      media: venue.media || [], // Preserve existing media
       price: venue.price,
       maxGuests: venue.maxGuests,
       meta: {
@@ -341,50 +437,50 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {profile.bookings?.length > 0 ? (
-          <div className="space-y-4">
-            {profile.bookings.map((booking: any) => (
-              <div
-                key={booking.id}
-                className="border rounded-lg p-4 hover:shadow-md transition"
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between">
-                  <div className="mb-4 md:mb-0">
-                    <h3 className="font-medium text-lg">
-                      {booking.venue.name}
-                    </h3>
-                    <p className="text-gray-600">
-                      {booking.venue.description.substring(0, 100)}...
-                    </p>
-                    <div className="flex items-center mt-2">
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-2">
-                        {booking.guests}{" "}
-                        {booking.guests === 1 ? "guest" : "guests"}
-                      </span>
-                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                        {format(new Date(booking.dateFrom), "MMM d, yyyy")} -{" "}
-                        {format(new Date(booking.dateTo), "MMM d, yyyy")}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => openBookingModal(booking)}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleBookingDelete(booking.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-                    >
-                      Cancel
-                    </button>
+          profile.bookings.map((booking: any) => (
+            <div
+              key={booking.id}
+              className="border rounded-lg p-4 hover:shadow-md transition"
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between">
+                <div className="mb-4 md:mb-0">
+                  <h3 className="font-medium text-lg">
+                    {booking.venue?.name ?? "Unknown Venue"}
+                  </h3>
+                  <p className="text-gray-600">
+                    {booking.venue?.description?.substring(0, 100) ??
+                      "No description available"}
+                    ...
+                  </p>
+                  <div className="flex items-center mt-2">
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-2">
+                      {booking.guests}{" "}
+                      {booking.guests === 1 ? "guest" : "guests"}
+                    </span>
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                      {format(new Date(booking.dateFrom), "MMM d, yyyy")} -{" "}
+                      {format(new Date(booking.dateTo), "MMM d, yyyy")}
+                    </span>
                   </div>
                 </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => openBookingModal(booking)}
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleBookingDelete(booking.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         ) : (
           <div className="text-center py-8 text-gray-500">
             You don't have any bookings yet.
@@ -564,7 +660,7 @@ const ProfilePage: React.FC = () => {
 
       {/* Edit Booking Modal */}
       {showBookingModal && currentEditItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
@@ -580,7 +676,9 @@ const ProfilePage: React.FC = () => {
               <form onSubmit={handleBookingUpdate}>
                 <fieldset className="mb-4">
                   <legend className="block text-gray-700 mb-2">Venue</legend>
-                  <p className="font-medium">{currentEditItem.venue.name}</p>
+                  <p className="font-medium">
+                    {currentEditItem.venue?.name ?? "Unknown Venue"}
+                  </p>
                 </fieldset>
 
                 <div className="mb-4">
@@ -671,27 +769,46 @@ const ProfilePage: React.FC = () => {
 
       {/* Edit Venue Modal */}
       {showVenueModal && currentEditItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Edit Venue</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-xl border border-gray-200/50 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Edit Venue
+                  </h2>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Update your venue details
+                  </p>
+                </div>
                 <button
                   onClick={() => setShowVenueModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-all duration-200"
                 >
-                  &times;
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
                 </button>
               </div>
 
-              <form onSubmit={handleVenueUpdate}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="mb-4">
+              <form onSubmit={handleVenueUpdate} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <label
                       htmlFor="venue-name"
-                      className="block text-gray-700 mb-2"
+                      className="block text-sm font-semibold text-gray-700"
                     >
-                      Name
+                      Venue Name
                     </label>
                     <input
                       id="venue-name"
@@ -700,39 +817,46 @@ const ProfilePage: React.FC = () => {
                       onChange={(e) =>
                         setVenueForm({ ...venueForm, name: e.target.value })
                       }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                      placeholder="Enter venue name"
                       required
                     />
                   </div>
 
-                  <div className="mb-4">
+                  <div className="space-y-2">
                     <label
                       htmlFor="venue-price"
-                      className="block text-gray-700 mb-2"
+                      className="block text-sm font-semibold text-gray-700"
                     >
-                      Price per night ($)
+                      Price per Night
                     </label>
-                    <input
-                      id="venue-price"
-                      type="number"
-                      min="0"
-                      value={venueForm.price}
-                      onChange={(e) =>
-                        setVenueForm({
-                          ...venueForm,
-                          price: parseFloat(e.target.value),
-                        })
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                        $
+                      </span>
+                      <input
+                        id="venue-price"
+                        type="number"
+                        min="0"
+                        value={venueForm.price}
+                        onChange={(e) =>
+                          setVenueForm({
+                            ...venueForm,
+                            price: parseFloat(e.target.value),
+                          })
+                        }
+                        className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="mb-4">
+                <div className="space-y-2">
                   <label
                     htmlFor="venue-description"
-                    className="block text-gray-700 mb-2"
+                    className="block text-sm font-semibold text-gray-700"
                   >
                     Description
                   </label>
@@ -745,19 +869,91 @@ const ProfilePage: React.FC = () => {
                         description: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none"
                     rows={4}
+                    placeholder="Describe your venue..."
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="mb-4">
+                <div className="space-y-4">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Venue Images
+                  </label>
+                  <div className="space-y-3">
+                    {venueForm.media.map((media, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          value={media.url}
+                          onChange={(e) => {
+                            const newMedia = [...venueForm.media];
+                            newMedia[index].url = e.target.value;
+                            setVenueForm({ ...venueForm, media: newMedia });
+                          }}
+                          className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                          placeholder="https://example.com/image.jpg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newMedia = [...venueForm.media];
+                            newMedia.splice(index, 1);
+                            setVenueForm({ ...venueForm, media: newMedia });
+                          }}
+                          className="w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 flex items-center justify-center"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVenueForm({
+                          ...venueForm,
+                          media: [...venueForm.media, { url: "", alt: "" }],
+                        });
+                      }}
+                      className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                      Add Image
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <label
                       htmlFor="venue-guests"
-                      className="block text-gray-700 mb-2"
+                      className="block text-sm font-semibold text-gray-700"
                     >
-                      Max Guests
+                      Maximum Guests
                     </label>
                     <input
                       id="venue-guests"
@@ -770,16 +966,19 @@ const ProfilePage: React.FC = () => {
                           maxGuests: parseInt(e.target.value),
                         })
                       }
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                      placeholder="1"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <p className="block text-gray-700 mb-2">Amenities</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <div className="flex items-center">
+                <div className="space-y-4">
+                  <p className="block text-sm font-semibold text-gray-700">
+                    Amenities
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="relative">
                       <input
                         type="checkbox"
                         id="wifi"
@@ -790,11 +989,33 @@ const ProfilePage: React.FC = () => {
                             meta: { ...venueForm.meta, wifi: e.target.checked },
                           })
                         }
-                        className="mr-2"
+                        className="peer sr-only"
                       />
-                      <label htmlFor="wifi">WiFi</label>
+                      <label
+                        htmlFor="wifi"
+                        className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 peer-checked:bg-blue-50 peer-checked:border-blue-300 transition-all duration-200"
+                      >
+                        <div className="w-5 h-5 border-2 border-gray-300 rounded peer-checked:bg-blue-500 peer-checked:border-blue-500 flex items-center justify-center">
+                          {venueForm.meta.wifi && (
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          WiFi
+                        </span>
+                      </label>
                     </div>
-                    <div className="flex items-center">
+                    <div className="relative">
                       <input
                         type="checkbox"
                         id="parking"
@@ -808,11 +1029,33 @@ const ProfilePage: React.FC = () => {
                             },
                           })
                         }
-                        className="mr-2"
+                        className="peer sr-only"
                       />
-                      <label htmlFor="parking">Parking</label>
+                      <label
+                        htmlFor="parking"
+                        className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 peer-checked:bg-blue-50 peer-checked:border-blue-300 transition-all duration-200"
+                      >
+                        <div className="w-5 h-5 border-2 border-gray-300 rounded peer-checked:bg-blue-500 peer-checked:border-blue-500 flex items-center justify-center">
+                          {venueForm.meta.parking && (
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Parking
+                        </span>
+                      </label>
                     </div>
-                    <div className="flex items-center">
+                    <div className="relative">
                       <input
                         type="checkbox"
                         id="breakfast"
@@ -826,11 +1069,33 @@ const ProfilePage: React.FC = () => {
                             },
                           })
                         }
-                        className="mr-2"
+                        className="peer sr-only"
                       />
-                      <label htmlFor="breakfast">Breakfast</label>
+                      <label
+                        htmlFor="breakfast"
+                        className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 peer-checked:bg-blue-50 peer-checked:border-blue-300 transition-all duration-200"
+                      >
+                        <div className="w-5 h-5 border-2 border-gray-300 rounded peer-checked:bg-blue-500 peer-checked:border-blue-500 flex items-center justify-center">
+                          {venueForm.meta.breakfast && (
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Breakfast
+                        </span>
+                      </label>
                     </div>
-                    <div className="flex items-center">
+                    <div className="relative">
                       <input
                         type="checkbox"
                         id="pets"
@@ -841,44 +1106,44 @@ const ProfilePage: React.FC = () => {
                             meta: { ...venueForm.meta, pets: e.target.checked },
                           })
                         }
-                        className="mr-2"
+                        className="peer sr-only"
                       />
-                      <label htmlFor="pets">Pets Allowed</label>
+                      <label
+                        htmlFor="pets"
+                        className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 peer-checked:bg-blue-50 peer-checked:border-blue-300 transition-all duration-200"
+                      >
+                        <div className="w-5 h-5 border-2 border-gray-300 rounded peer-checked:bg-blue-500 peer-checked:border-blue-500 flex items-center justify-center">
+                          {venueForm.meta.pets && (
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Pets
+                        </span>
+                      </label>
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium mb-2">Location</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="venue-address"
-                        className="block text-gray-700 mb-2"
-                      >
-                        Address
-                      </label>
-                      <input
-                        id="venue-address"
-                        type="text"
-                        value={venueForm.location.address}
-                        onChange={(e) =>
-                          setVenueForm({
-                            ...venueForm,
-                            location: {
-                              ...venueForm.location,
-                              address: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Location Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
                       <label
                         htmlFor="venue-city"
-                        className="block text-gray-700 mb-2"
+                        className="block text-sm font-semibold text-gray-700"
                       >
                         City
                       </label>
@@ -895,38 +1160,15 @@ const ProfilePage: React.FC = () => {
                             },
                           })
                         }
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                        placeholder="Enter city"
                       />
                     </div>
 
-                    <div>
-                      <label
-                        htmlFor="venue-zip"
-                        className="block text-gray-700 mb-2"
-                      >
-                        ZIP Code
-                      </label>
-                      <input
-                        id="venue-zip"
-                        type="text"
-                        value={venueForm.location.zip}
-                        onChange={(e) =>
-                          setVenueForm({
-                            ...venueForm,
-                            location: {
-                              ...venueForm.location,
-                              zip: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
+                    <div className="space-y-2">
                       <label
                         htmlFor="venue-country"
-                        className="block text-gray-700 mb-2"
+                        className="block text-sm font-semibold text-gray-700"
                       >
                         Country
                       </label>
@@ -943,47 +1185,24 @@ const ProfilePage: React.FC = () => {
                             },
                           })
                         }
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="venue-continent"
-                        className="block text-gray-700 mb-2"
-                      >
-                        Continent
-                      </label>
-                      <input
-                        id="venue-continent"
-                        type="text"
-                        value={venueForm.location.continent}
-                        onChange={(e) =>
-                          setVenueForm({
-                            ...venueForm,
-                            location: {
-                              ...venueForm.location,
-                              continent: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                        placeholder="Enter country"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => setShowVenueModal(false)}
-                    className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition"
+                    className="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-all duration-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
                     Update Venue
                   </button>

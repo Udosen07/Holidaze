@@ -28,9 +28,6 @@ export const Header = ({
     navigate("/profile");
   };
 
-  console.log("isAuthenticated:", isAuthenticated);
-  console.log("user:", user);
-
   return (
     <header className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -44,7 +41,7 @@ export const Header = ({
             <>
               {/* Create Venue Button - Only show if user is a venue manager */}
               {user.venueManager && (
-                <Link to="/create-venue">
+                <Link to="/venues/create">
                   <button className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-md flex items-center space-x-2 transition-colors">
                     <Plus className="h-4 w-4" />
                     <span>Create Venue</span>

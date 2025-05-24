@@ -1,4 +1,8 @@
-import type { RegisterUserData, LoginUserData } from "../types";
+import type {
+  RegisterUserData,
+  LoginUserData,
+  VenueUpdateData,
+} from "../types";
 
 const BASE_URL = "https://v2.api.noroff.dev";
 
@@ -35,10 +39,13 @@ export async function loginUser(data: LoginUserData) {
 }
 
 export async function getAllVenues() {
-  const response = await fetch(`${BASE_URL}/holidaze/venues`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
+  const response = await fetch(
+    `${BASE_URL}/holidaze/venues?sort=created&sortOrder=desc`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 
   const result = await response.json();
 
@@ -140,12 +147,17 @@ export const updateProfile = async (
 export const updateBooking = async (
   id: string,
   data: {
-    dateFrom?: string;
-    dateTo?: string;
-    guests?: number;
+    dateFrom: string;
+    dateTo: string;
+    guests: number;
   }
 ) => {
   try {
+    // Ensure all required fields are present
+    if (!data.dateFrom || !data.dateTo || !data.guests) {
+      throw new Error("Missing required booking fields");
+    }
+
     const response = await fetch(`${BASE_URL}/holidaze/bookings/${id}`, {
       method: "PUT",
       headers: {
@@ -153,10 +165,16 @@ export const updateBooking = async (
         Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         "X-Noroff-API-Key": API_KEY,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        dateFrom: data.dateFrom,
+        dateTo: data.dateTo,
+        guests: data.guests,
+      }),
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error("API Error Details:", errorData);
       throw new Error(
         `Failed to update booking: ${response.status} ${response.statusText}`
       );
@@ -186,7 +204,7 @@ export const deleteBooking = async (id: string) => {
       );
     }
 
-    return await response.json();
+    return;
   } catch (error) {
     console.error("Error deleting booking:", error);
     throw error;
@@ -195,8 +213,13 @@ export const deleteBooking = async (id: string) => {
 
 // Venues API
 
-export const updateVenue = async (id: string, data: any) => {
+export const updateVenue = async (id: string, data: VenueUpdateData) => {
   try {
+    // Basic validation
+    if (!id || !data) {
+      throw new Error("Missing required fields for venue update");
+    }
+
     const response = await fetch(`${BASE_URL}/holidaze/venues/${id}`, {
       method: "PUT",
       headers: {
@@ -208,6 +231,8 @@ export const updateVenue = async (id: string, data: any) => {
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error("API Error Details:", errorData);
       throw new Error(
         `Failed to update venue: ${response.status} ${response.statusText}`
       );
@@ -222,6 +247,10 @@ export const updateVenue = async (id: string, data: any) => {
 
 export const deleteVenue = async (id: string) => {
   try {
+    if (!id) {
+      throw new Error("Venue ID is required for deletion");
+    }
+
     const response = await fetch(`${BASE_URL}/holidaze/venues/${id}`, {
       method: "DELETE",
       headers: {
@@ -232,12 +261,15 @@ export const deleteVenue = async (id: string) => {
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error("API Error Details:", errorData);
       throw new Error(
         `Failed to delete venue: ${response.status} ${response.statusText}`
       );
     }
 
-    return await response.json();
+    // For DELETE, we typically don't expect response data
+    return true; // Or simply return;
   } catch (error) {
     console.error("Error deleting venue:", error);
     throw error;
@@ -270,6 +302,55 @@ export const createBooking = async (bookingData: {
     return await response.json();
   } catch (error) {
     console.error("Error creating booking:", error);
+    throw error;
+  }
+};
+
+export const createVenue = async (venueData: {
+  name: string;
+  description: string;
+  media?: Array<{ url: string; alt?: string }>;
+  price: number;
+  maxGuests: number;
+  rating?: number;
+  meta?: {
+    wifi?: boolean;
+    parking?: boolean;
+    breakfast?: boolean;
+    pets?: boolean;
+  };
+  location?: {
+    address?: string;
+    city?: string;
+    zip?: string;
+    country?: string;
+    continent?: string;
+    lat?: number;
+    lng?: number;
+  };
+}) => {
+  try {
+    const response = await fetch(`${BASE_URL}/holidaze/venues`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        "X-Noroff-API-Key": API_KEY,
+      },
+      body: JSON.stringify(venueData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message ??
+          `Failed to create venue: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating venue:", error);
     throw error;
   }
 };

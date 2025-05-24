@@ -45,7 +45,7 @@ export default function SingleVenuePage() {
   }, [id]);
 
   const handleBackClick = () => {
-    navigate(-1);
+    navigate("/");
   };
 
   const toggleCalendar = () => {
